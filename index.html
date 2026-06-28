@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <title>Recruitment Report Dashboard 2026</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root { --primary: #007672; --accent: #FFA300; }
+        body { font-family: 'Segoe UI', sans-serif; background: #f4f7f6; padding: 20px; color: #333; }
+        .container { max-width: 1200px; margin: auto; }
+        h1 { color: var(--primary); text-align: center; }
+        
+        /* KPI Bar */
+        .kpi-bar { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 20px; }
+        .kpi-card { background: white; padding: 15px; border-radius: 8px; text-align: center; border-bottom: 4px solid var(--primary); box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .kpi-val { font-size: 20px; font-weight: bold; color: var(--primary); }
+        
+        /* Main Section */
+        .content { display: grid; grid-template-columns: 2fr 1fr; gap: 20px; }
+        .box { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th { background: var(--primary); color: white; padding: 10px; font-size: 12px; }
+        td { padding: 10px; border-bottom: 1px solid #ddd; text-align: center; font-size: 13px; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <h1>Recruitment Report 2026 — มิตรไมตรีการแพทย์</h1>
+    
+    <div class="kpi-bar">
+        <div class="kpi-card"><div class="kpi-val" id="k-req">0</div><div>HC Req</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="k-src">0</div><div>Sourcing</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="k-int">0</div><div>Interview</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="k-hired">0</div><div>Hired</div></div>
+        <div class="kpi-card"><div class="kpi-val" id="k-vac">0</div><div>Vacancies</div></div>
+    </div>
+
+    <div class="content">
+        <div class="box">
+            <h3>📊 สรุปผลรายพื้นที่ (Location Summary)</h3>
+            <table id="main-table">
+                <thead>
+                    <tr><th>พื้นที่ (Location)</th><th>HC Req</th><th>Hired</th><th>Fill Rate</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+        </div>
+        <div class="box">
+            <h3>🍩 ประเภทการรับสมัคร</h3>
+            <canvas id="typeChart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    // ⚠️ ขั้นตอนสำคัญ: นำลิงก์ Web App URL มาใส่ตรงนี้
+    const API_URL = "https://script.google.com/macros/s/AKfycbycQGrzr683VlvxJ5p17PTT4BRJvN7dioeXMZ78dkSaoX4okPEpGR_RJM6q3UjHimD8/exec";
+
+    fetch(API_URL)
+        .then(response => response.json())
+        .then(data => {
+            // โค้ดส่วนนี้จะทำหน้าที่ดึงข้อมูลจาก Sheet มาคำนวณลง Card และ Table
+            // ตัวอย่าง: นับยอดรวม
+            const totalHired = data.reduce((sum, r) => sum + (parseInt(r['Hired (บรรจุ)'] || 0)), 0);
+            document.getElementById('k-hired').innerText = totalHired;
+            
+            // พี่สามารถเพิ่ม Loop วนข้อมูลใส่ตารางได้ที่นี่ครับ
+        });
+</script>
+
+</body>
+</html>
