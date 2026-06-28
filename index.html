@@ -1,0 +1,116 @@
+function doGet(e) {
+  const output = handleRequest(e);
+  return output;
+}
+
+function handleRequest(e) {
+  SpreadsheetApp.flush();
+  const ss = SpreadsheetApp.getActiveSpreadsheet();
+
+  try {
+    let rs = ss.getSheetByName("📋 Recruitment_Status");
+    if (!rs) rs = ss.getSheetByName("Recruitment_Status");
+    if (!rs) {
+      const found = ss.getSheets().find(s => s.getName().includes("Recruitment_Status"));
+      rs = found || null;
+    }
+
+    if (!rs) {
+      return makeResponse({ error: "ไม่พบ Sheet Recruitment_Status" });
+    }
+
+    const data = rs.getDataRange().getValues();
+    if (data.length < 2) {
+      return makeResponse({ error: "Sheet ว่างเปล่า" });
+    }
+
+    const COL = {
+      runNo: 0, month: 2, type: 3, position: 4, division: 5, dept: 6,
+      location: 7, branch: 8, hcReq: 10, hired: 16, hold: 17,
+      vacancies: 18, startDate: 19, recruitType: 23, slaTarget: 24,
+      daysOpen: 25, slaMet: 26, remark: 27, statusCurrent: 34
+    };
+
+    const rows = [];
+    for (let i = 1; i < data.length; i++) {
+      const r = data[i];
+      if (!r[COL.runNo] || String(r[COL.runNo]).trim() === "📊 TOTAL") continue;
+
+      rows.push({
+        month: String(r[COL.month] || "").trim(),
+        type: String(r[COL.type] || "").trim(),
+        position: String(r[COL.position] || "").trim(),
+        location: String(r[COL.location] || "").trim(),
+        branch: String(r[COL.branch] || "").trim(),
+        hcReq: toNum(r[COL.hcReq]),
+        hired: toNum(r[COL.hired]),
+        vacancies: toNum(r[COL.vacancies]),
+        daysOpen: toNum(r[COL.daysOpen]),
+        slaMet: String(r[COL.slaMet] || "").trim(),
+        startDate: r[COL.startDate] ? fmtDate(r[COL.startDate]) : "",
+        status: String(r[COL.statusCurrent] || "").trim()
+      });
+    }
+
+    // KPI Calculation
+    const totalHC = rows.reduce((s, r) => s + r.hcReq, 0);
+    const totalHired = rows.reduce((s, r) => s + r.hired, 0);
+    const slaMetN = rows.filter(r => String(r.slaMet).toLowerCase() === "yes").length;
+    const slaRows = rows.filter(r => r.slaMet !== "");
+
+    // Monthly Trend & Details (สำหรับทำ Filter Pill และแสดงตาราง)
+    const mMap = {};
+    rows.forEach(r => {
+      const m = r.month || "ไม่ระบุ";
+      if (!mMap[m]) mMap[m] = { hcReq: 0, hired: 0, slaY: 0, slaT: 0, days: [], details: [] };
+      
+      mMap[m].hcReq += r.hcReq;
+      mMap[m].hired += r.hired;
+      if (r.hired > 0 && r.startDate) {
+        mMap[m].details.push({
+          position: r.position,
+          location: r.location,
+          branch: r.branch,
+          type: r.type,
+          startDate: r.startDate
+        });
+      }
+    });
+
+    const monthlyTrend = Object.entries(mMap)
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([month, d]) => ({
+        month,
+        hired: d.hired,
+        details: d.details // ส่งข้อมูลพนักงานรายเดือนไปที่หน้าเว็บ
+      }));
+
+    return makeResponse({
+      lastUpdate: new Date().toISOString(),
+      totalHired,
+      totalHC,
+      monthlyTrend // ใช้ก้อนนี้สำหรับสร้าง Filter Pill และตารางใน Dashboard
+    });
+
+  } catch (err) {
+    return makeResponse({ error: err.message });
+  }
+}
+
+// Helpers
+function makeResponse(obj) {
+  return ContentService.createTextOutput(JSON.stringify(obj))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+function toNum(val) {
+  const n = parseFloat(String(val).replace(/,/g, ""));
+  return isNaN(n) ? 0 : n;
+}
+
+function fmtDate(val) {
+  try {
+    if (val instanceof Date) return Utilities.formatDate(val, "Asia/Bangkok", "dd/MM/yyyy");
+    return String(val);
+  } catch (e) { return String(val); }
+}
